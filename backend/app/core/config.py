@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # config.py is in backend/app/core/, so the project root is three folders up
@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(min_length=32)  # required, different from the OTP key
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    # Email (Gmail SMTP)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: EmailStr
+    smtp_password: SecretStr
+    smtp_from_email: EmailStr
+    smtp_from_name: str = "PDF Chat Platform"
+    smtp_timeout_seconds: int = 10
 
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",
