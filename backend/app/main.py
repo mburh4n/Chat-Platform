@@ -1,15 +1,33 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.exceptions import AppError
+
+# Show INFO-level log messages from our own modules (e.g. "Email sent to ...")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
 )
+
+
+# Turn any AppError raised in a service into a JSON error response
+@app.exception_handler(AppError)
+async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+# Routers
+app.include_router(auth_router)
 
 
 @app.get("/", tags=["Root"])

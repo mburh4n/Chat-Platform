@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     otp_secret_key: str = Field(min_length=32)  # required, must be long and random
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5
+    otp_resend_cooldown_seconds: int = 60  # new: minimum time between new codes
 
     # JWT settings
     jwt_secret_key: str = Field(min_length=32)  # required, different from the OTP key

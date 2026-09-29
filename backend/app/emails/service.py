@@ -1,6 +1,7 @@
 import logging
 import smtplib
 import ssl
+from collections.abc import Callable
 from email.message import EmailMessage
 from email.utils import formataddr
 
@@ -85,3 +86,20 @@ def send_password_reset_otp_email(to_email: str, name: str, otp: str) -> None:
         text_body=content.text_body,
         html_body=content.html_body,
     )
+
+
+# ---------------------------------------------------------------------------
+# Background sending
+# ---------------------------------------------------------------------------
+
+
+def safe_send(send_function: Callable[..., None], **kwargs: object) -> None:
+    """Run an email function as a background task without crashing.
+
+    Failures are already logged inside send_email, so they are only
+    swallowed here. The user can request a new code if an email never arrives.
+    """
+    try:
+        send_function(**kwargs)
+    except EmailSendError:
+        pass
