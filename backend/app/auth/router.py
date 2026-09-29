@@ -2,12 +2,18 @@ from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.orm import Session
 
 from app.auth import service as auth_service
-from app.auth.schemas import SignupRequest, VerifyEmailRequest
+from app.auth.schemas import ResendOTPRequest, SignupRequest, VerifyEmailRequest
 from app.core.database import get_db
 from app.core.schemas import ErrorResponse, MessageResponse
 from app.emails.service import safe_send, send_verification_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
+
+# One shared message, so every resend response is identical
+RESEND_VERIFICATION_MESSAGE = (
+    "If this email belongs to an account that still needs verification, "
+    "a new code has been sent."
+)
 
 
 # Plain "def" (not "async def") because the database session is synchronous
@@ -57,3 +63,30 @@ def verify_email(
     """Verify an email address with the 6-digit code sent at sign-up."""
     auth_service.verify_email(db, payload)
     return MessageResponse(message="Email verified successfully. You can now log in.")
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+def resend_verification(
+    payload: ResendOTPRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    """Send a new verification code.
+
+    Always returns the same message, whether or not the email is registered,
+    so it can't be used to discover accounts.
+    """
+    result = auth_service.resend_verification_code(db, payload)
+
+    if result is not None:
+        user, code = result
+        background_tasks.add_task(
+            safe_send,
+            send_verification_otp_email,
+            to_email=user.email,
+            name=user.name,
+            otp=code,
+        )
+
+    # Identical response in every case
+    return MessageResponse(message=RESEND_VERIFICATION_MESSAGE)
