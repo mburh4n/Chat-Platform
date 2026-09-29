@@ -5,6 +5,10 @@ from email.message import EmailMessage
 from email.utils import formataddr
 
 from app.core.config import settings
+from app.emails.templates import (
+    build_password_reset_otp_email,
+    build_verification_otp_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,3 +60,28 @@ def send_email(
         raise EmailSendError("Could not send email") from exc
 
     logger.info("Email sent to %s", to_email)
+
+    # ---------------------------------------------------------------------------
+# OTP emails (used by the auth endpoints, usually as background tasks)
+# ---------------------------------------------------------------------------
+
+
+def send_verification_otp_email(to_email: str, name: str, otp: str) -> None:
+    """Send the sign-up email verification code."""
+    content = build_verification_otp_email(name=name, otp=otp)
+    send_email(
+        to_email=to_email,
+        subject=content.subject,
+        text_body=content.text_body,
+        html_body=content.html_body,
+    )
+
+def send_password_reset_otp_email(to_email: str, name: str, otp: str) -> None:
+    """Send the password reset code."""
+    content = build_password_reset_otp_email(name=name, otp=otp)
+    send_email(
+        to_email=to_email,
+        subject=content.subject,
+        text_body=content.text_body,
+        html_body=content.html_body,
+    )
