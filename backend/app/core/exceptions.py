@@ -37,3 +37,13 @@ class ConflictError(AppError):
 
 class TooManyRequestsError(AppError):
     status_code = 429
+
+
+class PayloadTooLargeError(AppError):
+    status_code = 413
+
+
+class ServiceUnavailableError(AppError):
+    """An outside service we depend on (Gemini, the MCP server) failed."""
+
+    status_code = 503

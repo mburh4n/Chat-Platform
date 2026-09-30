@@ -230,3 +230,176 @@ input:disabled {
 .loading {
   color: #6b7280;
 }
+
+/* ---------- Wide pages (dashboard, chat) ---------- */
+.container-wide {
+  max-width: 960px;
+}
+
+.narrow {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+/* ---------- Button variants ---------- */
+a.btn {
+  text-align: center;
+  text-decoration: none;
+}
+
+.btn-small {
+  width: auto;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.875rem;
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-danger:disabled {
+  background: #fca5a5;
+}
+
+.btn-secondary {
+  color: #1f2937;
+  background: #e5e7eb;
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
+}
+
+/* ---------- Status badges ---------- */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge-processing {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.badge-ready {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.badge-failed {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.badge-tool {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+
+/* ---------- Upload ---------- */
+input[type="file"] {
+  padding: 0.4rem;
+  background: #f9fafb;
+}
+
+.file-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.progress {
+  position: relative;
+  height: 1.75rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  background: #e5e7eb;
+  border-radius: 6px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #93c5fd;
+  transition: width 0.2s ease;
+}
+
+.progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---------- Document list ---------- */
+.document-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.document-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.document-row:first-child {
+  border-top: none;
+}
+
+.document-info {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.document-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.document-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5rem;
+}

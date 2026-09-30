@@ -28,7 +28,8 @@ export default function Layout() {
           )}
         </nav>
       </header>
-      <main className="container">
+      {/* Logged-in pages (dashboard, chat) need more room than the auth forms */}
+      <main className={isAuthenticated ? "container container-wide" : "container"}>
         <Outlet />
       </main>
     </>

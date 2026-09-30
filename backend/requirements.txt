@@ -1,27 +1,44 @@
+# Web framework
+fastapi==0.141.1
+starlette==1.7.0
+uvicorn==0.54.0
+python-multipart==0.0.32
+
+# Validation and settings
+pydantic==2.13.5
+pydantic_core==2.46.5
+pydantic-settings==2.15.0
+email-validator
+python-dotenv==1.2.3
+
+# Database
+SQLAlchemy==2.1.1
 alembic==1.20.0
+psycopg==3.3.6
+psycopg-binary==3.3.6
+pgvector==0.5.0
+
+# Security
+PyJWT==2.15.0
+pwdlib[argon2]
+
+# PDFs, embeddings and LLM
+pypdf==6.19.0
+google-genai==2.25.0
+
+# MCP client (v1 SDK, matches the MCP server)
+mcp==1.30.0
+httpx==0.28.1
+
+# Supporting packages
 annotated-doc==0.0.5
 annotated-types==0.8.0
-pyjwt
 anyio==4.15.1
 click==8.5.0
-fastapi==0.141.1
 h11==0.16.0
 idna==3.20
 Mako==1.4.3
 MarkupSafe==3.0.3
-pwdlib[argon2]
-psycopg==3.3.6
-email-validator
-psycopg-binary==3.3.6
-pydantic==2.13.5
-pydantic-settings==2.15.0
-pydantic_core==2.46.5
-PyJWT==2.15.0
-python-dotenv==1.2.3
-SQLAlchemy==2.1.1
-starlette==1.7.0
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.4
-uvicorn==0.54.0
-httpx

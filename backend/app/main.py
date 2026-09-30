@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,16 +10,35 @@ from sqlalchemy.orm import Session
 
 from app.auth.router import router as auth_router
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import SessionLocal, get_db
 from app.core.exceptions import AppError
+from app.documents import service as documents_service
+from app.documents import storage
+from app.documents.router import router as documents_router
 from app.users.router import router as users_router
 
 # Show INFO-level log messages from our own modules (e.g. "Email sent to ...")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Runs once when the server starts."""
+    storage.ensure_upload_dir()
+    # Background tasks die with the process: mark their documents as failed
+    with SessionLocal() as db:
+        interrupted = documents_service.fail_interrupted_documents(db)
+    if interrupted:
+        logger.warning("Marked %s interrupted document(s) as failed", interrupted)
+    yield
+
+
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Allow the React frontend (a different origin) to call this API from the browser
@@ -40,6 +60,7 @@ async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 # Routers
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(documents_router)
 
 
 @app.get("/", tags=["Root"])

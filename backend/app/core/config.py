@@ -37,6 +37,26 @@ class Settings(BaseSettings):
     smtp_from_name: str = "PDF Chat Platform"
     smtp_timeout_seconds: int = 10
 
+    # Google Gemini (LLM + embeddings). Empty key: auth still works, PDF features fail clearly.
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_chat_model: str = "gemini-3.8-flash"
+    gemini_embedding_model: str = "gemini-embedding-001"
+    # Low temperature = focused answers that stick to the retrieved text
+    gemini_temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+
+    # PDF uploads
+    upload_dir: Path = ROOT_DIR / "backend" / "uploads"
+    max_upload_size_mb: int = Field(default=20, ge=1)
+    max_files_per_upload: int = Field(default=10, ge=1)
+
+    # Chunking and retrieval
+    chunk_size: int = 1000
+    chunk_overlap: int = 150
+    retrieval_top_k: int = 5
+
+    # MCP server (streamable HTTP endpoint)
+    mcp_server_url: str = "http://localhost:8001/mcp"
+
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",
         env_file_encoding="utf-8",

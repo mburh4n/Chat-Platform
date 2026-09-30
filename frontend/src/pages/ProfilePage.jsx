@@ -185,7 +185,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <>
+    <div className="narrow">
       <section className="card">
         <h1>Your profile</h1>
         <p className="field-hint">
@@ -199,6 +199,6 @@ export default function ProfilePage() {
         <h2>Change password</h2>
         <ChangePasswordForm onTokenReplaced={replaceToken} />
       </section>
-    </>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ from app.core.database import Base
 
 # Only imported for type hints, to avoid a circular import at runtime
 if TYPE_CHECKING:
+    from app.models.document import Document
     from app.models.otp import EmailOTP, PasswordResetOTP
 
 
@@ -50,6 +51,13 @@ class User(Base):
 
     # One user -> many password reset OTPs
     password_reset_otps: Mapped[list["PasswordResetOTP"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    # One user -> many uploaded PDFs
+    documents: Mapped[list["Document"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
