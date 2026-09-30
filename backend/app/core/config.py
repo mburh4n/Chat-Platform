@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr("")
     gemini_chat_model: str = "gemini-3.8-flash"
     gemini_embedding_model: str = "gemini-embedding-001"
+    # Tried in order when the chat model is overloaded (JSON list in .env)
+    gemini_fallback_models: list[str] = ["gemini-3.6-flash", "gemini-3.5-flash-lite"]
     # Low temperature = focused answers that stick to the retrieved text
     gemini_temperature: float = Field(default=0.2, ge=0.0, le=2.0)
 

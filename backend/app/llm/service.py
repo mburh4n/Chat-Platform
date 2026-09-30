@@ -8,6 +8,7 @@ Tool-calling loop (the model never runs anything itself):
 """
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -25,6 +26,11 @@ NOT_FOUND_ANSWER = "I could not find this information in the selected document."
 
 # Safety limit: at most this many tool rounds before a final answer is forced
 MAX_TOOL_ROUNDS = 3
+
+# Temporary Gemini failures (rate limit, overload) are retried, then the next model is tried
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+ATTEMPTS_PER_MODEL = 2
+RETRY_DELAY_SECONDS = 1.5
 
 SYSTEM_PROMPT = f"""You answer questions about ONE PDF document that the user selected.
 
@@ -89,8 +95,47 @@ def _normalize_answer(text: str | None) -> str:
     return answer
 
 
+class _ModelCaller:
+    """Calls Gemini, retrying temporary errors and falling back to other models.
+
+    Switching model is only allowed before the conversation contains a model
+    turn: Gemini's thought signatures belong to the model that produced them.
+    """
+
+    def __init__(self, client) -> None:
+        self.client = client
+        self.models = [settings.gemini_chat_model] + [
+            m for m in settings.gemini_fallback_models if m != settings.gemini_chat_model
+        ]
+        self.model_index = 0
+
+    def generate(self, contents: list[types.Content], config) -> types.GenerateContentResponse:
+        can_switch = len(contents) == 1  # only the user's prompt so far
+        while True:
+            model = self.models[self.model_index]
+            for attempt in range(1, ATTEMPTS_PER_MODEL + 1):
+                try:
+                    return self.client.models.generate_content(
+                        model=model, contents=contents, config=config
+                    )
+                except errors.APIError as exc:
+                    if exc.code not in RETRYABLE_STATUS_CODES:
+                        raise
+                    logger.warning(
+                        "Gemini %s failed (%s), attempt %s/%s", model, exc.code, attempt, ATTEMPTS_PER_MODEL
+                    )
+                    last_error = exc
+                    if attempt < ATTEMPTS_PER_MODEL:
+                        time.sleep(RETRY_DELAY_SECONDS * attempt)
+
+            if not can_switch or self.model_index + 1 >= len(self.models):
+                raise last_error
+            self.model_index += 1
+            logger.warning("Switching to fallback model %s", self.models[self.model_index])
+
+
 def generate_answer(question: str, chunks: list[RetrievedChunk]) -> Answer:
-    client = get_gemini_client()
+    caller = _ModelCaller(get_gemini_client())
     declarations = _get_tool_declarations()
 
     config = types.GenerateContentConfig(
@@ -107,9 +152,7 @@ def generate_answer(question: str, chunks: list[RetrievedChunk]) -> Answer:
 
     try:
         for _ in range(MAX_TOOL_ROUNDS):
-            response = client.models.generate_content(
-                model=settings.gemini_chat_model, contents=contents, config=config
-            )
+            response = caller.generate(contents, config)
             function_calls = response.function_calls or []
             if not function_calls:
                 return Answer(text=_normalize_answer(response.text), used_tool=used_tool)
@@ -132,9 +175,7 @@ def generate_answer(question: str, chunks: list[RetrievedChunk]) -> Answer:
 
         # Too many tool rounds: ask for a final answer with tools switched off
         final_config = config.model_copy(update={"tools": None})
-        response = client.models.generate_content(
-            model=settings.gemini_chat_model, contents=contents, config=final_config
-        )
+        response = caller.generate(contents, final_config)
         return Answer(text=_normalize_answer(response.text), used_tool=used_tool)
 
     except errors.APIError as exc:

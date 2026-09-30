@@ -44,11 +44,23 @@ class FakeGemini:
 
     def generate_content(self, model, contents, config):
         self.requests.append({"model": model, "contents": list(contents), "config": config})
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+
+def overloaded():
+    from google.genai import errors
+
+    return errors.APIError(503, {"error": {"message": "high demand", "status": "UNAVAILABLE"}})
 
 
 @pytest.fixture(autouse=True)
 def fakes(tmp_path, monkeypatch):
+    monkeypatch.setattr(llm_service, "RETRY_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config.settings, "gemini_chat_model", "main-model")
+    monkeypatch.setattr(config.settings, "gemini_fallback_models", ["fallback-model"])
     monkeypatch.setattr(config.settings, "upload_dir", tmp_path)
     monkeypatch.setattr(documents_service, "embed_documents", fake_embed_documents)
     monkeypatch.setattr(chat_service, "embed_query", fake_embedding)
@@ -228,3 +240,26 @@ def test_vector_search_filters_by_user_and_document(client, outbox, token, docum
     assert all("keepers" not in r.content for r in results)
     assert results[0].distance <= results[1].distance <= results[2].distance
     assert other_doc != document_id
+
+
+def test_overloaded_model_is_retried_then_falls_back(client, token, document_id, monkeypatch):
+    gemini = use_gemini(monkeypatch, overloaded(), overloaded(), text_response("Answer from fallback."))
+    response = ask(client, token, document_id, "When was the lighthouse built?")
+    assert response.status_code == 201
+    assert response.json()["answer"] == "Answer from fallback."
+    assert [r["model"] for r in gemini.requests] == ["main-model", "main-model", "fallback-model"]
+
+
+def test_single_temporary_error_is_retried_on_same_model(client, token, document_id, monkeypatch):
+    gemini = use_gemini(monkeypatch, overloaded(), text_response("Second try worked."))
+    assert ask(client, token, document_id, "Anything?").json()["answer"] == "Second try worked."
+    assert [r["model"] for r in gemini.requests] == ["main-model", "main-model"]
+
+
+def test_no_model_switch_after_a_tool_round(client, token, document_id, monkeypatch):
+    # After the main model made a tool call, its thought signatures are in the
+    # conversation, so a failure must not switch to another model
+    gemini = use_gemini(monkeypatch, tool_call_response("authentication"), overloaded(), overloaded())
+    response = ask(client, token, document_id, "What does authentication mean?")
+    assert response.status_code == 503
+    assert {r["model"] for r in gemini.requests} == {"main-model"}
