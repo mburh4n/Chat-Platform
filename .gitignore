@@ -1,4 +1,18 @@
+# Secrets
 .env
+
+# Python
 __pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Uploaded PDFs (stored in a Docker volume or backend/uploads when run locally)
+uploads/
+
 # Local email previews
 email_previews/
