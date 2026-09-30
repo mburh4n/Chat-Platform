@@ -4,7 +4,7 @@ import axios from "axios";
 // Token storage
 // ---------------------------------------------------------------------------
 
-const TOKEN_STORAGE_KEY = "pdfchat_access_token";
+export const TOKEN_STORAGE_KEY = "pdfchat_access_token";
 
 export function getStoredToken() {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -36,3 +36,29 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// ---------------------------------------------------------------------------
+// Automatic logout when the backend rejects our token
+// ---------------------------------------------------------------------------
+
+// AuthProvider registers a function here; client.js knows nothing about React
+let unauthorizedHandler = null;
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler;
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Only a 401 on a request that carried a token means "your token is bad".
+    // A wrong-password login is also 401 but sends no token: no logout then.
+    const sentToken = Boolean(error.config?.headers?.Authorization);
+
+    if (error.response?.status === 401 && sentToken && unauthorizedHandler) {
+      unauthorizedHandler();
+    }
+
+    return Promise.reject(error);
+  },
+);
