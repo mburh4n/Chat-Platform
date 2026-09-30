@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.chat import ChatMessage
     from app.models.user import User
 
 # gemini-embedding-001 with output_dimensionality=768.
@@ -81,8 +82,13 @@ class Document(Base):
 
     user: Mapped["User"] = relationship(back_populates="documents")
 
-    # Deleting a document deletes its chunks
+    # Deleting a document deletes its chunks and chat messages
     chunks: Mapped[list["DocumentChunk"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
         passive_deletes=True,

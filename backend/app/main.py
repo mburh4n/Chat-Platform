@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.auth.router import router as auth_router
+from app.chat.router import router as chat_router
 from app.core.config import settings
 from app.core.database import SessionLocal, get_db
 from app.core.exceptions import AppError
@@ -61,6 +62,7 @@ async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(documents_router)
+app.include_router(chat_router)
 
 
 @app.get("/", tags=["Root"])
