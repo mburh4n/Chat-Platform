@@ -2,3 +2,10 @@
 __pycache__
 *.pyc
 .env
+.pytest_cache
+uploads
+email_previews
+tests
+scripts
+pytest.ini
+requirements-dev.txt

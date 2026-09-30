@@ -1,14 +1,16 @@
+# Start everything with:  docker compose up --build
+# Frontend: http://localhost:8080   API docs: http://localhost:8000/docs
+
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: pdfchat_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,28 +19,62 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
-    build:
-      context: ./backend
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8000:8000"
-
   mcp:
     build:
       context: ./mcp_server
+    restart: unless-stopped
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8001
+    ports:
+      - "8001:8001"
+    healthcheck:
+      # The port accepting connections means the server is up
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8001), 2)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Inside Docker, services reach each other by service name, not localhost
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      MCP_SERVER_URL: http://mcp:8001/mcp
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   frontend:
     build:
       context: ./frontend
+      args:
+        # The address the BROWSER uses to reach the backend
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  uploads:
