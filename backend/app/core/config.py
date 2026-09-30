@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "PDF Chat Platform"
 
+    # Frontend origins allowed to call this API from a browser (CORS)
+    cors_origins: list[str] = ["http://localhost:5173"]
+
     # Database (required)
     database_url: str
 

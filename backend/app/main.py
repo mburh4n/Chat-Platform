@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,6 +18,15 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
+)
+
+# Allow the React frontend (a different origin) to call this API from the browser
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,  # we send the JWT in a header, not in cookies
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
