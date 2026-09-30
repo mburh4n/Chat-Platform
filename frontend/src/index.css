@@ -211,3 +211,22 @@ input[aria-invalid="true"] {
   letter-spacing: 0.5rem;
   text-align: center;
 }
+
+/* ---------- Page sections ---------- */
+h2 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+
+.card + .card {
+  margin-top: 1.5rem;
+}
+
+input:disabled {
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+.loading {
+  color: #6b7280;
+}

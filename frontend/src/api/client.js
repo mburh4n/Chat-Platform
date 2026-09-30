@@ -53,9 +53,11 @@ api.interceptors.response.use(
   (error) => {
     // Only a 401 on a request that carried a token means "your token is bad".
     // A wrong-password login is also 401 but sends no token: no logout then.
+    // Requests can opt out with { skipAuthRedirect: true } (used by logout).
     const sentToken = Boolean(error.config?.headers?.Authorization);
+    const skip = Boolean(error.config?.skipAuthRedirect);
 
-    if (error.response?.status === 401 && sentToken && unauthorizedHandler) {
+    if (error.response?.status === 401 && sentToken && !skip && unauthorizedHandler) {
       unauthorizedHandler();
     }
 

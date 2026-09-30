@@ -11,6 +11,7 @@ from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import AppError
+from app.users.router import router as users_router
 
 # Show INFO-level log messages from our own modules (e.g. "Email sent to ...")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -38,6 +39,7 @@ async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 
 # Routers
 app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/", tags=["Root"])

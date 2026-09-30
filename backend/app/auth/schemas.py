@@ -51,6 +51,32 @@ class ResendOTPRequest(StrictRequest):
     email: Email
 
 
+class ForgotPasswordRequest(StrictRequest):
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"email": "muhammad.burhan@example.com"}]}
+    )
+
+    email: Email
+
+
+class ResetPasswordRequest(StrictRequest):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "email": "muhammad.burhan@example.com",
+                    "otp": "123456",
+                    "new_password": "EvenStronger456",
+                }
+            ]
+        }
+    )
+
+    email: Email
+    otp: OTPCode
+    new_password: NewPassword
+
+
 class LoginRequest(StrictRequest):
     model_config = ConfigDict(
         json_schema_extra={

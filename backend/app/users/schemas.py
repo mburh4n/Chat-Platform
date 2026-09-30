@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.fields import LoginPassword, NewPassword, PersonName
+
 
 class UserResponse(BaseModel):
     """The public view of a user. Only these fields can ever leave the server.
@@ -30,3 +32,30 @@ class UserResponse(BaseModel):
     email: str
     is_verified: bool
     created_at: datetime
+
+
+class UpdateProfileRequest(BaseModel):
+    """Fields a user may change on their profile.
+
+    The email is not editable here: changing it would need a new verification.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"name": "Muhammad Burhan"}]},
+    )
+
+    name: PersonName
+
+
+class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [{"current_password": "StrongPass123", "new_password": "EvenStronger456"}]
+        },
+    )
+
+    # Login rules for the current password, so older passwords are still accepted
+    current_password: LoginPassword
+    new_password: NewPassword

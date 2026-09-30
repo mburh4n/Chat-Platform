@@ -5,8 +5,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.schemas import (
+    ForgotPasswordRequest,
     LoginRequest,
     ResendOTPRequest,
+    ResetPasswordRequest,
     SignupRequest,
     VerifyEmailRequest,
 )
@@ -149,3 +151,58 @@ def login(db: Session, data: LoginRequest) -> str:
         raise ForbiddenError("Please verify your email before logging in.")
 
     return create_access_token(user.id, user.token_version)
+
+
+def logout(db: Session, user: User) -> None:
+    """Invalidate every access token the user currently holds.
+
+    JWTs can't be deleted, but each one carries the token_version it was
+    issued with. Increasing it makes get_current_user reject all of them.
+    """
+    user.token_version += 1
+    db.commit()
+
+
+def request_password_reset(
+    db: Session, data: ForgotPasswordRequest
+) -> tuple[User, str] | None:
+    """Create a password reset code if the account exists and the cooldown allows.
+
+    Returns (user, code) when an email should be sent, otherwise None.
+    The caller must respond the SAME way in both cases.
+    Unverified accounts may reset too: receiving the code proves they own the email.
+    """
+    user = db.scalar(select(User).where(User.email == data.email))
+    if user is None:
+        return None
+
+    try:
+        code = create_otp(db, user, OTPPurpose.PASSWORD_RESET)
+    except TooManyRequestsError:
+        # Silent, like resend-verification: a 429 would reveal the account exists
+        logger.info("Password reset code skipped for user %s: cooldown active", user.id)
+        return None
+
+    db.commit()
+    return user, code
+
+
+def reset_password(db: Session, data: ResetPasswordRequest) -> None:
+    """Set a new password using a reset code.
+
+    In one transaction: the code is used up, the password changes, the email
+    counts as verified (the code arrived in that inbox), and token_version
+    increases so any session an attacker might have had is logged out.
+    """
+    user = db.scalar(select(User).where(User.email == data.email))
+
+    # Same message as a bad code, so this endpoint can't reveal which emails exist
+    if user is None:
+        raise BadRequestError(INVALID_CODE_MESSAGE)
+
+    consume_otp(db, user, OTPPurpose.PASSWORD_RESET, data.otp)
+
+    user.hashed_password = hash_password(data.new_password)
+    user.is_verified = True
+    user.token_version += 1
+    db.commit()

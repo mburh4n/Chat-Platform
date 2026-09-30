@@ -6,7 +6,8 @@ import {
   setUnauthorizedHandler,
   storeToken,
 } from "../api/client";
-import { login as loginRequest } from "../api/auth";
+import { login as loginRequest, logout as logoutRequest } from "../api/auth";
+import { getMe } from "../api/users";
 import { AuthContext } from "./auth-context";
 
 const EXPIRED_NOTICE = "Your session has expired. Please log in again.";
@@ -55,6 +56,10 @@ function readInitialToken() {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(readInitialToken);
   const [notice, setNotice] = useState(null);
+  // The profile is stored with the token it was loaded for, so a stale
+  // profile is never shown after logout or when another account logs in.
+  const [profile, setProfile] = useState({ token: null, user: null });
+  const user = profile.token === token ? profile.user : null;
 
   const login = useCallback(async ({ email, password }) => {
     // Errors are not caught here: the login page shows them
@@ -65,15 +70,54 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  // reason "expired": the token is already dead, so only forget it locally.
+  // Otherwise also tell the backend, which revokes every token for this user.
   const logout = useCallback((reason) => {
+    const currentToken = getStoredToken();
     clearStoredToken();
     setToken(null);
     setNotice(reason === "expired" ? EXPIRED_NOTICE : null);
+
+    if (reason !== "expired" && currentToken) {
+      // Best effort: the user is logged out on this device either way
+      logoutRequest(currentToken).catch(() => {});
+    }
   }, []);
+
+  // After a password change the backend returns a new token (the old one is revoked)
+  // Same user, so the loaded profile carries over to the new token.
+  const replaceToken = useCallback((newToken) => {
+    storeToken(newToken);
+    setProfile((current) => ({ token: newToken, user: current.user }));
+    setToken(newToken);
+  }, []);
+
+  // Called by the profile page after a successful update
+  const updateUser = useCallback(
+    (updatedUser) => setProfile({ token, user: updatedUser }),
+    [token],
+  );
 
   const clearNotice = useCallback(() => {
     setNotice(null);
   }, []);
+
+  // Load the logged-in user's profile whenever the token changes.
+  // A rejected token triggers the 401 handler below, which logs out.
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    getMe()
+      .then((me) => {
+        if (!cancelled) setProfile({ token, user: me });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   // Log out automatically at the exact moment the token expires
   useEffect(() => {
@@ -110,12 +154,15 @@ export function AuthProvider({ children }) {
     () => ({
       token,
       isAuthenticated: token !== null,
+      user,
       notice,
       login,
       logout,
+      replaceToken,
+      updateUser,
       clearNotice,
     }),
-    [token, notice, login, logout, clearNotice],
+    [token, user, notice, login, logout, replaceToken, updateUser, clearNotice],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

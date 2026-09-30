@@ -22,3 +22,27 @@ export async function login({ email, password }) {
   const response = await api.post("/api/auth/login", { email, password });
   return response.data;
 }
+
+// The token is passed explicitly because AuthProvider clears it from storage
+// first. skipAuthRedirect: a 401 here only means "already logged out".
+export async function logout(token) {
+  const response = await api.post("/api/auth/logout", null, {
+    headers: { Authorization: `Bearer ${token}` },
+    skipAuthRedirect: true,
+  });
+  return response.data;
+}
+
+export async function forgotPassword({ email }) {
+  const response = await api.post("/api/auth/forgot-password", { email });
+  return response.data;
+}
+
+export async function resetPassword({ email, otp, newPassword }) {
+  const response = await api.post("/api/auth/reset-password", {
+    email,
+    otp,
+    new_password: newPassword,
+  });
+  return response.data;
+}
