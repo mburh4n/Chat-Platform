@@ -53,7 +53,7 @@ raise `AppError` subclasses, and a global handler turns those into `{"detail": "
 | Frontend | React 19 (Vite, JavaScript), React Router, Axios, served by Nginx |
 | Backend | FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, PyJWT, pwdlib (Argon2), pypdf |
 | Database | PostgreSQL 16 + pgvector 0.8 (`pgvector/pgvector:pg16`), HNSW cosine index |
-| AI | Google Gemini via `google-genai`: `gemini-3.8-flash` (answers), `gemini-embedding-001` (768-dim embeddings) |
+| AI | Google Gemini via `google-genai`: `gemini-3.8-flash` (answers, with fallback models when overloaded), `gemini-embedding-001` (768-dim embeddings) |
 | MCP | Official MCP Python SDK (v1, `FastMCP`), streamable HTTP transport |
 | Email | Gmail SMTP with an App Password |
 | Infra | Docker, Docker Compose |
@@ -135,6 +135,7 @@ Then edit `.env`. `.env` is git-ignored; `.env.example` contains placeholders on
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` | Gmail SMTP settings (App Password!) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `GEMINI_CHAT_MODEL`, `GEMINI_EMBEDDING_MODEL`, `GEMINI_TEMPERATURE` | Models and answer temperature (default 0.2) |
+| `GEMINI_FALLBACK_MODELS` | JSON list of models tried when the chat model is overloaded (default `["gemini-3.6-flash","gemini-3.5-flash-lite"]`) |
 | `MAX_UPLOAD_SIZE_MB`, `MAX_FILES_PER_UPLOAD` | Upload limits (defaults 20 MB, 10 files) |
 | `MCP_SERVER_URL` | MCP endpoint (outside Docker `http://localhost:8001/mcp`; Compose sets `http://mcp:8001/mcp`) |
 
@@ -251,7 +252,8 @@ Reload the chat page to show that history is loaded from the database.
 |---|---|
 | No OTP email | Check spam; verify `SMTP_*` values and the App Password; see `docker compose logs backend` |
 | Document shows *Failed* with "AI service is not configured" | Set `GEMINI_API_KEY` in `.env`, then `docker compose up -d backend` |
+| Chat says "The AI service could not answer right now" | Gemini returned 503/429 on every model (high demand). Wait a minute and retry; `docker compose logs backend` shows the retries and model switches |
 | "No text could be extracted" | The PDF is a scanned image; only text-based PDFs are supported (no OCR) |
-| Definition comes from "built-in technical dictionary" | dictionaryapi.dev was unreachable; the MCP server fell back to its local list |
+| Definition comes from "built-in technical dictionary" | dictionaryapi.dev was unreachable (it returned Cloudflare 522 errors during testing); the MCP server fell back to its local list after an 8 s timeout |
 | Browser shows CORS / network errors | Make sure `CORS_ORIGINS` contains the exact frontend origin and `VITE_API_URL` is the backend address, then rebuild |
 | Port already in use | Change the left side of the port mapping in `docker-compose.yml` (or `POSTGRES_PORT`) |

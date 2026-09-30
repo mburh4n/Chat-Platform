@@ -48,3 +48,10 @@ README.md, `docs/ER-diagram.md` (Mermaid), gitignore/secret audit (incl. git his
 
 ## Finally
 `docs/EXPLAINED.md`: plain-language walkthrough + likely demo questions with short answers.
+
+## Status (2026-09-30)
+All phases complete. Phase 6 results against the Docker stack with real Gmail, Gemini and MCP:
+all 10 demonstration steps pass, plus token revocation (reset, change password, logout) and
+user isolation (second user gets 404 on the first user's document, chat and history).
+Found and fixed during Phase 6: Gemini 503 "high demand" on gemini-3.8-flash → retries + fallback models.
+External issue: dictionaryapi.dev returns Cloudflare 522 → MCP server uses its built-in dictionary.

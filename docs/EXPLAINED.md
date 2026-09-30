@@ -233,6 +233,13 @@ In short, it says:
   words), or is empty, the backend replaces it with the exact sentence. The UI therefore always shows the
   exact required wording.
 
+### When Gemini is overloaded
+Gemini sometimes answers **503 "high demand"** (this happened while testing). The backend retries twice,
+then tries the next model in `GEMINI_FALLBACK_MODELS` (`gemini-3.6-flash`, then `gemini-3.5-flash-lite`).
+It only switches model **before** any tool call: after a tool round the conversation contains the first
+model's thought signatures, which another model can't use. If everything fails the user gets a clear
+503 message and nothing is saved.
+
 Only 5 excerpts are sent, not the whole PDF. If the answer is somewhere else in the document, retrieval
 has to find it. That is why the question and chunks are embedded with matching task types.
 
@@ -390,6 +397,9 @@ A: `used_tool` is saved with the message (badge in the UI), and the MCP server l
 
 **Q: What if the dictionary API is down?**
 A: The MCP server falls back to its built-in technical dictionary, and says so in the result. If the whole MCP server is down, chat still works without tools.
+
+**Q: What if Gemini is down or overloaded?**
+A: Temporary errors (429/5xx) are retried, then fallback models are tried. If all fail, the user sees "The AI service could not answer right now" and nothing is saved. Uploads that can't be embedded are marked `failed`.
 
 **Q: Why FastAPI `def` instead of `async def` for most routes?**
 A: The database driver/session is synchronous. FastAPI runs `def` routes in a thread pool, so they don't block the server.
