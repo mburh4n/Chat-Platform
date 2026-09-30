@@ -31,6 +31,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
+# A real Argon2 hash of a random password, created once when the app starts.
+# Login checks against it when an email doesn't exist, so "unknown email" takes
+# the same time as "wrong password" and response times can't reveal accounts.
+DUMMY_PASSWORD_HASH = password_hash.hash(secrets.token_urlsafe(32))
+
+
 # ---------------------------------------------------------------------------
 # One-time passwords (OTPs)
 # ---------------------------------------------------------------------------

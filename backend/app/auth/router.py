@@ -2,7 +2,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.orm import Session
 
 from app.auth import service as auth_service
-from app.auth.schemas import ResendOTPRequest, SignupRequest, VerifyEmailRequest
+from app.auth.schemas import (
+    LoginRequest,
+    ResendOTPRequest,
+    SignupRequest,
+    TokenResponse,
+    VerifyEmailRequest,
+)
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.schemas import ErrorResponse, MessageResponse
 from app.emails.service import safe_send, send_verification_otp_email
@@ -90,3 +97,23 @@ def resend_verification(
 
     # Identical response in every case
     return MessageResponse(message=RESEND_VERIFICATION_MESSAGE)
+
+
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid email or password"},
+        403: {"model": ErrorResponse, "description": "Email not verified yet"},
+    },
+)
+def login(
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """Log in with email and password and receive a JWT access token."""
+    access_token = auth_service.login(db, payload)
+    return TokenResponse(
+        access_token=access_token,
+        expires_in=settings.access_token_expire_minutes * 60,
+    )

@@ -4,9 +4,26 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth.schemas import ResendOTPRequest, SignupRequest, VerifyEmailRequest
-from app.core.exceptions import BadRequestError, ConflictError, TooManyRequestsError
-from app.core.security import OTPPurpose, hash_password
+from app.auth.schemas import (
+    LoginRequest,
+    ResendOTPRequest,
+    SignupRequest,
+    VerifyEmailRequest,
+)
+from app.core.exceptions import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    TooManyRequestsError,
+    UnauthorizedError,
+)
+from app.core.security import (
+    DUMMY_PASSWORD_HASH,
+    OTPPurpose,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 from app.emails.otp_service import INVALID_CODE_MESSAGE, consume_otp, create_otp
 from app.models import User
 
@@ -96,3 +113,39 @@ def resend_verification_code(
 
     db.commit()  # saves the invalidated old codes and the new code together
     return user, code
+
+
+def authenticate_user(db: Session, email: str, password: str) -> User | None:
+    """Return the user if the email and password are correct, otherwise None.
+
+    Unknown emails still run a full password check against a dummy hash,
+    so both failure cases take the same time (timing-attack protection).
+    """
+    user = db.scalar(select(User).where(User.email == email))
+
+    if user is None:
+        verify_password(password, DUMMY_PASSWORD_HASH)  # same work, result ignored
+        return None
+
+    if not verify_password(password, user.hashed_password):
+        return None
+
+    return user
+
+
+def login(db: Session, data: LoginRequest) -> str:
+    """Check credentials and return a JWT access token.
+
+    Order matters: the password is checked BEFORE the verification status,
+    so "please verify your email" is only shown to someone who knows the password.
+    """
+    user = authenticate_user(db, data.email, data.password)
+
+    if user is None:
+        # One message for both unknown email and wrong password
+        raise UnauthorizedError("Invalid email or password.")
+
+    if not user.is_verified:
+        raise ForbiddenError("Please verify your email before logging in.")
+
+    return create_access_token(user.id, user.token_version)
